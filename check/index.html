@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка связи</title>
+<style>
+  body { margin: 0; padding: 32px 20px; background: #fcf1f4; color: #4b2333; font: 17px/1.5 -apple-system, system-ui, sans-serif; }
+  h1 { font-weight: 500; color: #9b3f5e; margin: 0 0 6px; }
+  p { margin: 0 0 22px; color: #7d5563; font-size: 15px; }
+  li { list-style: none; display: flex; gap: 12px; align-items: center; padding: 14px 16px; margin-bottom: 8px; background: #fffafb; border: 1px solid #efd0da; border-radius: 16px; }
+  ul { padding: 0; margin: 0; }
+  b { width: 24px; text-align: center; }
+  .sum { margin-top: 20px; padding: 16px; border-radius: 16px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Проверка связи</h1>
+<p>Открой эту страницу на айфоне через мобильный интернет, без VPN и без Wi‑Fi. Подожди 10 секунд и пришли скриншот.</p>
+<ul id="list"></ul>
+<div id="sum" class="sum"></div>
+<script>
+const SUPABASE_URL = 'https://csdigcxpjqopjglfyhnn.supabase.co';
+const checks = [
+  ['Сайт (GitHub Pages)', async () => true],
+  ['База (Supabase)', async () => { await fetch(SUPABASE_URL + '/auth/v1/health', { mode: 'no-cors', cache: 'no-store' }); return true; }],
+  ['Перевод (MyMemory)', async () => (await fetch('https://api.mymemory.translated.net/get?langpair=en|ru&q=hello')).ok],
+  ['Транскрипция (dictionaryapi)', async () => (await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/hello')).ok],
+];
+const list = document.getElementById('list');
+let ok = 0;
+Promise.all(checks.map(async ([name, fn]) => {
+  const li = document.createElement('li');
+  li.innerHTML = `<b>⏳</b><span>${name}</span>`;
+  list.appendChild(li);
+  const t0 = performance.now();
+  let res = false;
+  try { res = await Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(), 8000))]); } catch {}
+  if (res) ok++;
+  li.innerHTML = `<b>${res ? '✅' : '❌'}</b><span>${name}${res ? ` — ${Math.round(performance.now() - t0)} мс` : ' — не отвечает'}</span>`;
+})).then(() => {
+  const sum = document.getElementById('sum');
+  sum.textContent = ok === checks.length ? 'Всё работает — можно переезжать на Supabase 🎉' : 'Что-то не открывается — лучше VPS';
+  sum.style.background = ok === checks.length ? '#e3f0e8' : '#fbe0e6';
+});
+</script>
+</body>
+</html>

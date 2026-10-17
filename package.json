@@ -1,0 +1,9 @@
+{
+  "name": "bloom-words",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "deploy": "sh scripts/deploy.sh"
+  }
+}
