@@ -70,7 +70,7 @@ function Login() {
     try {
       await signIn(email, password);
     } catch (err) {
-      setError(/invalid/i.test(err.message) ? 'Неверная почта или пароль' : !navigator.onLine ? 'Нет интернета' : 'Не получилось войти, попробуй ещё раз');
+      setError(/invalid/i.test(err.message) ? 'Неверное имя или пароль' : !navigator.onLine ? 'Нет интернета' : 'Не получилось войти, попробуй ещё раз');
     } finally {
       setBusy(false);
     }
@@ -81,8 +81,9 @@ function Login() {
         <div style={{ textAlign: 'center' }}><Flower size={56} /></div>
         <h1 className="display h-lg" style={{ textAlign: 'center', marginBottom: 8 }}>Твой <em>словарик</em></h1>
         <div className="field">
-          <label htmlFor="l-email">Почта</label>
-          <input id="l-email" className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label htmlFor="l-email">Имя пользователя</label>
+          <input id="l-email" className="input" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck="false"
+            value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div className="field">
           <label htmlFor="l-pass">Пароль</label>

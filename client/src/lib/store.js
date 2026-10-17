@@ -141,8 +141,15 @@ export async function initStore() {
   if (data.session) await sync();
 }
 
-export async function signIn(email, password) {
-  const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+// Supabase Auth needs an email, so a plain username "liza" becomes "liza@bloom.local".
+export const LOGIN_DOMAIN = 'bloom.local';
+export const loginEmail = (name) => {
+  const n = name.trim().toLowerCase();
+  return n.includes('@') ? n : `${n}@${LOGIN_DOMAIN}`;
+};
+
+export async function signIn(name, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email: loginEmail(name), password });
   if (error) throw error;
   state.auth = 'ok';
   emit();
