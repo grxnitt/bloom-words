@@ -7,14 +7,14 @@ import { Done } from './Study.jsx';
 
 const PAIRS = 6;
 
-export default function Match({ deck, set, onAgain }) {
+export default function Match({ deck, set, onAgain, study }) {
   const tiles = useMemo(() => {
     const picked = deck.slice(0, PAIRS);
     return shuffle(picked.flatMap((c) => [
       { key: `${c.id}-en`, pair: c.id, text: c.term, en: true },
-      { key: `${c.id}-ru`, pair: c.id, text: c.translation.split(',')[0].trim(), en: false },
+      { key: `${c.id}-ru`, pair: c.id, text: study ? c.translation : c.translation.split(',')[0].trim(), en: false },
     ]));
-  }, [deck]);
+  }, [deck, study]);
   const pairs = tiles.length / 2;
 
   const [sel, setSel] = useState(null);

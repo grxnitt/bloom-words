@@ -9,8 +9,8 @@ import WordSheet from './WordSheet.jsx';
 
 export const MODES = [
   { id: 'cards', title: 'Карточки', sub: 'листай и вспоминай', icon: GalleryHorizontalEnd },
-  { id: 'quiz', title: 'Тест', sub: 'выбери перевод', icon: ListChecks },
-  { id: 'write', title: 'Написание', sub: 'вводи слово', icon: Keyboard },
+  { id: 'quiz', title: 'Тест', sub: 'выбери ответ', icon: ListChecks },
+  { id: 'write', title: 'Написание', sub: 'вспоминай ответ', icon: Keyboard },
   { id: 'match', title: 'Подбор', sub: 'пары на время', icon: Shapes },
 ];
 
@@ -33,7 +33,7 @@ export default function SetDetail({ id }) {
   const p = setProgress(cards);
 
   const del = () => {
-    if (!confirm(`Удалить набор «${set.title}» и все слова в нём?`)) return;
+    if (!confirm(`Удалить набор «${set.title}» и все карточки в нём?`)) return;
     cards.forEach((c) => remove('cards', c.id));
     remove('sets', id);
     toast('Набор удалён');
@@ -67,10 +67,10 @@ export default function SetDetail({ id }) {
 
       {cards.length === 0 ? (
         <div className="empty mt-sm enter-2">
-          <div className="display h-md">Добавь <em>слова</em></div>
-          <p className="small">По одному — перевод и транскрипция подставятся сами. Или сразу списком: ответ ChatGPT, файл, строчки «word — перевод».</p>
+          <div className="display h-md">Добавь <em>карточки</em></div>
+          <p className="small">Добавляй вопрос и ответ по одному или импортируй список из файла. Английские наборы поддерживают перевод и транскрипцию.</p>
           <div className="add-row" style={{ maxWidth: 420, margin: '18px auto 0' }}>
-            <button className="btn" onClick={() => setEditing('new')}><Plus size={18} /> Слово</button>
+            <button className="btn" onClick={() => setEditing('new')}><Plus size={18} /> Карточка</button>
             <button className="btn soft" onClick={() => go(`/import/${id}`)}><ListPlus size={18} /> Списком</button>
           </div>
         </div>
@@ -97,10 +97,10 @@ export default function SetDetail({ id }) {
           </div>
 
           <div className="section-head">
-            <h2 className="display h-md">Слова <span className="muted small" style={{ fontFamily: 'var(--sans)' }}>{p.total}</span></h2>
+            <h2 className="display h-md">Карточки <span className="muted small" style={{ fontFamily: 'var(--sans)' }}>{p.total}</span></h2>
           </div>
           <div className="add-row" style={{ marginBottom: 12 }}>
-            <button className="btn sm" onClick={() => setEditing('new')}><Plus size={16} /> Слово</button>
+            <button className="btn sm" onClick={() => setEditing('new')}><Plus size={16} /> Карточка</button>
             <button className="btn soft sm" onClick={() => go(`/import/${id}`)}><ListPlus size={16} /> Списком / файл</button>
           </div>
           <div className="word-list enter-3">

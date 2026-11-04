@@ -22,7 +22,7 @@ export function plural(n, one, few, many) {
   if (b === 1) return one;
   return many;
 }
-export const words = (n) => `${n} ${plural(n, 'слово', 'слова', 'слов')}`;
+export const words = (n) => `${n} ${plural(n, 'карточка', 'карточки', 'карточек')}`;
 
 export function shuffle(arr) {
   const a = arr.slice();

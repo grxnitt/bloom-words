@@ -14,7 +14,7 @@ function distance(a, b) {
   return dp[a.length][b.length];
 }
 
-export default function Write({ deck, onAgain }) {
+export default function Write({ deck, onAgain, study }) {
   const [queue, setQueue] = useState(deck);
   const [i, setI] = useState(0);
   const [value, setValue] = useState('');
@@ -32,9 +32,10 @@ export default function Write({ deck, onAgain }) {
   }
 
   const check = () => {
+    if (study) { setResult('shown'); return; }
     const got = normalizeAnswer(value);
     if (!got) return;
-    const want = normalizeAnswer(card.term);
+    const want = normalizeAnswer(study ? card.translation : card.term);
     const d = distance(got, want);
     setResult(d === 0 ? 'ok' : d === 1 && want.length >= 5 ? 'typo' : 'wrong');
   };
@@ -50,47 +51,48 @@ export default function Write({ deck, onAgain }) {
   return (
     <>
       <StudyTop done={i} total={queue.length} />
-      <div className="eyebrow" style={{ marginBottom: 12 }}>Напиши по-английски</div>
+      <div className="eyebrow" style={{ marginBottom: 12 }}>{study ? 'Вспомни ответ своими словами' : 'Напиши по-английски'}</div>
       <div className="q-card enter" key={i}>
-        <div className="term" style={{ fontSize: 'clamp(30px, 9vw, 46px)' }}>{card.translation}</div>
-        {hint > 0 && !result && (
+        <div className="term" style={{ fontSize: study ? 'clamp(20px, 5vw, 28px)' : 'clamp(30px, 9vw, 46px)' }}>{study ? card.term : card.translation}</div>
+        {!study && hint > 0 && !result && (
           <div className="muted" style={{ marginTop: 12, letterSpacing: '.18em', fontWeight: 600 }}>
             {card.term.split('').map((ch, n) => (n < hint || ch === ' ' ? ch : '·')).join('')}
           </div>
         )}
       </div>
 
-      <form className="stack mt-sm" onSubmit={(e) => { e.preventDefault(); result ? next(ok) : check(); }}>
-        <input ref={input} className="input big" value={value} readOnly={!!result} placeholder="Твой ответ"
+      <form className="stack mt-sm" onSubmit={(e) => { e.preventDefault(); result ? (!study && next(ok)) : check(); }}>
+        <textarea ref={input} className="input big" value={value} readOnly={!!result} placeholder="Твой ответ"
           autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off"
           onChange={(e) => setValue(e.target.value)}
-          style={result ? { borderColor: ok ? 'var(--good)' : 'var(--bad)' } : null} />
+          style={result ? { borderColor: study || ok ? 'var(--good)' : 'var(--bad)' } : null} />
 
         {result && (
-          <div className={`feedback ${ok ? 'ok' : 'err'}`}>
+          <div className={`feedback ${study || ok ? 'ok' : 'err'}`}>
             <div className="row between">
               <div>
-                {result === 'ok' && <b>Верно!</b>}
-                {result === 'typo' && <><b>Почти!</b> Правильно: <b>{card.term}</b></>}
-                {result === 'wrong' && <>Правильно: <b>{card.term}</b></>}
+                {study && <><b>Ответ из карточки:</b><p>{card.translation}</p><p className="small">Сравни смысл со своим ответом и оцени себя.</p></>}
+                {!study && result === 'ok' && <b>Верно!</b>}
+                {!study && result === 'typo' && <><b>Почти!</b> Правильно: <b>{card.term}</b></>}
+                {!study && result === 'wrong' && <>Правильно: <b>{card.term}</b></>}
                 {card.transcription && <span style={{ opacity: .7 }}> {card.transcription}</span>}
               </div>
-              <SayButton text={card.term} className="icon-btn bare" />
+              {!study && <SayButton text={card.term} className="icon-btn bare" />}
             </div>
           </div>
         )}
 
         {!result ? (
           <div className="row">
-            <button type="button" className="btn soft" onClick={() => setHint((h) => Math.min(h + 1, card.term.length))}>
+            {!study && <button type="button" className="btn soft" onClick={() => setHint((h) => Math.min(h + 1, card.term.length))}>
               <Lightbulb size={17} /> Подсказка
-            </button>
-            <button className="btn" style={{ flex: 1 }} disabled={!value.trim()}>Проверить</button>
+            </button>}
+            <button className="btn" style={{ flex: 1 }} disabled={!value.trim()}>{study ? 'Показать ответ' : 'Проверить'}</button>
           </div>
         ) : (
           <div className="row">
-            {result === 'wrong' && <button type="button" className="btn soft" onClick={() => next(true)}>Я была права</button>}
-            <button className="btn" style={{ flex: 1 }}>Дальше <ArrowRight size={18} /></button>
+            {study ? <><button type="button" className="btn soft" onClick={() => next(false)}>Ещё учу</button><button type="button" className="btn" onClick={() => next(true)}>Знаю</button></> : <>{result === 'wrong' && <button type="button" className="btn soft" onClick={() => next(true)}>Я была права</button>}
+            <button className="btn" style={{ flex: 1 }}>Дальше <ArrowRight size={18} /></button></>}
           </div>
         )}
       </form>

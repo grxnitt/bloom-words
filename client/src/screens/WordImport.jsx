@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ClipboardPaste, Copy, FileUp, Loader2, Check, Plus } from 'lucide-react';
 import { useStore, list, put } from '../lib/store.js';
-import { parseWords, dedupe, WORDS_PROMPT } from '../lib/wordFormat.js';
+import { parseWords, parseCollection, dedupe, WORDS_PROMPT } from '../lib/wordFormat.js';
 import { lookup } from '../lib/lookup.js';
 import { back, go, words as wordsN } from '../lib/util.js';
 import { toast } from '../components/ui.jsx';
@@ -17,12 +17,16 @@ export default function WordImport({ setId: initialSet }) {
   const data = useStore((s) => s.data);
   const sets = list('sets', data).sort((a, b) => b.updatedAt - a.updatedAt);
   const [text, setText] = useState('');
+  const [type, setType] = useState(initialSet && data.sets[initialSet]?.type !== 'study' ? 'language' : 'study');
   const [items, setItems] = useState([]);
   const [target, setTarget] = useState(initialSet || sets[0]?.id || 'new');
   const [newName, setNewName] = useState('');
   const [finding, setFinding] = useState(0);
   const fileRef = useRef(null);
   const run = useRef(0);
+  const collection = useMemo(() => parseCollection(text), [text]);
+
+  const effectiveType = target === 'new' ? type : data.sets[target]?.type || 'language';
 
   const existing = useMemo(
     () => (target === 'new' ? [] : list('cards', data).filter((c) => c.setId === target).map((c) => c.term)),
@@ -32,10 +36,13 @@ export default function WordImport({ setId: initialSet }) {
   // Parse whenever the text changes, then fill in missing translations in the background.
   useEffect(() => {
     const id = ++run.current;
+    if (collection) { setItems([]); setFinding(0); return; }
     const t = setTimeout(async () => {
       const parsed = parseWords(text);
+      const mode = parsed.type === 'study' ? 'study' : effectiveType;
+      if (parsed.type === 'study') setType('study');
       if (parsed.set && !initialSet) { setNewName(parsed.set); setTarget('new'); }
-      const next = parsed.words.map((w, i) => ({ ...w, key: `${i}-${w.term}`, on: true, loading: !w.translation || !w.transcription }));
+      const next = parsed.words.map((w, i) => ({ ...w, key: `${i}-${w.term}`, on: true, loading: mode === 'language' && (!w.translation || !w.transcription) }));
       setItems(next);
       const todo = next.filter((w) => w.loading);
       setFinding(todo.length);
@@ -58,7 +65,7 @@ export default function WordImport({ setId: initialSet }) {
       await Promise.all([worker(), worker(), worker()]);
     }, 350);
     return () => clearTimeout(t);
-  }, [text, initialSet]);
+  }, [text, initialSet, effectiveType, collection]);
 
   const rows = dedupe(items, existing).map((w) => ({ ...w, on: w.on && !w.dup }));
   const chosen = rows.filter((w) => w.on && w.term && w.translation);
@@ -75,31 +82,56 @@ export default function WordImport({ setId: initialSet }) {
   };
 
   const save = () => {
+    if (collection) {
+      let added = 0;
+      for (const topic of collection) {
+        const existingSet = sets.find((s) => s.title === topic.set && s.type === topic.type);
+        const sid = existingSet?.id || put('sets', { title: topic.set, type: topic.type }).id;
+        const existingTerms = list('cards', data).filter((c) => c.setId === sid).map((c) => c.term);
+        for (const w of dedupe(topic.words, existingTerms).filter((w) => !w.dup)) {
+          put('cards', { setId: sid, box: 0, kind: topic.type === 'study' ? 'study' : 'language', term: w.term, translation: w.translation, transcription: w.transcription });
+          added++;
+        }
+      }
+      toast(`Добавлено: ${wordsN(added)}`);
+      go('/');
+      return;
+    }
     let setId = target;
     if (target === 'new') {
       const name = newName.trim() || 'Новый набор';
-      setId = put('sets', { title: name }).id;
+      setId = put('sets', { title: name, type }).id;
     }
-    chosen.forEach((w) => put('cards', { setId, box: 0, term: w.term, translation: w.translation, transcription: w.transcription }));
+    chosen.forEach((w) => put('cards', { setId, box: 0, kind: (target === 'new' ? type : data.sets[target]?.type) === 'study' ? 'study' : 'language', term: w.term, translation: w.translation, transcription: w.transcription }));
     toast(`Добавлено: ${wordsN(chosen.length)}`);
     go(`/set/${setId}`);
   };
+
+  if (collection) return (
+    <div>
+      <h1 className="display h-lg">Наборы <em>по темам</em></h1>
+      <p>Найдено {collection.length} наборов · {wordsN(collection.reduce((n, s) => n + s.words.length, 0))}. Каждый набор сохранится отдельно. Уже добавленные вопросы будут пропущены.</p>
+      <div className="stack">{collection.map((s) => <section className="block" key={s.set}><h2>{s.set}</h2><p>{wordsN(s.words.length)}</p><p className="small">{s.words[0].term}</p></section>)}</div>
+      <div className="save-bar"><button className="btn block-w" onClick={save}>Добавить все наборы</button><button className="btn soft" onClick={() => setText('')}>Другой файл</button></div>
+    </div>
+  );
 
   return (
     <div>
       <div className="page-head">
         <button className="icon-btn" aria-label="Назад" onClick={() => back('/')}><ArrowLeft size={20} /></button>
       </div>
-      <h1 className="display h-lg enter" style={{ marginBottom: 18 }}>Слова <em>списком</em></h1>
+      <h1 className="display h-lg enter" style={{ marginBottom: 18 }}>Карточки <em>списком</em></h1>
 
+      <div className="field" style={{ marginBottom: 16 }}><label htmlFor="import-type">Формат карточек</label><select id="import-type" className="input" value={type} onChange={(e) => setType(e.target.value)}><option value="study">Вопрос и ответ — любой предмет</option><option value="language">Английский — перевод и транскрипция</option></select></div>
       <section className="block enter">
         <div className="eyebrow">Как получить список</div>
-        <ol className="steps">
+        {type === 'study' ? <p>Вставь список «вопрос — ответ» или JSON с полями question и answer. Можно загрузить файл. Каждый вопрос станет отдельной карточкой.</p> : <><ol className="steps">
           <li>Скопируй промпт и отправь его ChatGPT вместе с текстом, фото страницы или списком слов.</li>
           <li>ChatGPT выпишет незнакомые слова с переводом и транскрипцией.</li>
           <li>Вставь его ответ ниже или загрузи файл. Подойдёт и обычный список «word — перевод» или просто слова по строчкам — перевод найдётся сам.</li>
         </ol>
-        <button className="btn soft" onClick={copyPrompt}><Copy size={17} /> Скопировать промпт</button>
+        <button className="btn soft" onClick={copyPrompt}><Copy size={17} /> Скопировать промпт</button></>}
       </section>
 
       <div className="stack mt-sm enter-2">
@@ -109,7 +141,7 @@ export default function WordImport({ setId: initialSet }) {
           <input ref={fileRef} type="file" accept={ACCEPT} hidden onChange={(e) => { readFile(e.target.files?.[0]); e.target.value = ''; }} />
         </div>
         <div className="field">
-          <label htmlFor="w-list">Ответ ChatGPT или список слов</label>
+          <label htmlFor="w-list">Вопросы и ответы или список слов</label>
           <textarea id="w-list" className="textarea" style={{ minHeight: 150 }} value={text} onChange={(e) => setText(e.target.value)}
             placeholder={'reliable — надёжный\ngive up — сдаваться\nluggage'} />
         </div>
@@ -147,13 +179,13 @@ export default function WordImport({ setId: initialSet }) {
                 </button>
                 <div className="imp-fields">
                   <div className="row" style={{ gap: 8 }}>
-                    <input className="imp-term" value={w.term} onChange={(e) => edit(w.key, { term: e.target.value })} aria-label="Слово" />
+                    <input className="imp-term" value={w.term} onChange={(e) => edit(w.key, { term: e.target.value })} aria-label="Вопрос или термин" />
                     {w.dup && <span className="tag">уже есть</span>}
                   </div>
                   <input className="imp-tr" value={w.translation} placeholder={w.loading ? 'ищу перевод…' : 'перевод'}
-                    onChange={(e) => edit(w.key, { translation: e.target.value })} aria-label="Перевод" />
-                  <input className="imp-ts" value={w.transcription} placeholder={w.loading ? '' : 'транскрипция'}
-                    onChange={(e) => edit(w.key, { transcription: e.target.value })} aria-label="Транскрипция" />
+                    onChange={(e) => edit(w.key, { translation: e.target.value })} aria-label="Ответ" />
+                  {type === 'language' && <input className="imp-ts" value={w.transcription} placeholder={w.loading ? '' : 'транскрипция'}
+                    onChange={(e) => edit(w.key, { transcription: e.target.value })} aria-label="Транскрипция" />}
                 </div>
               </div>
             ))}

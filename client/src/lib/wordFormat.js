@@ -27,11 +27,11 @@ function fromJson(raw) {
   const words = list.map((w) => (typeof w === 'string'
     ? { term: w.trim(), translation: '', transcription: '' }
     : {
-      term: str(w.term || w.word || w.en || w.english),
-      translation: str(w.translation || w.ru || w.russian || w.meaning),
+      term: str(w.term || w.word || w.en || w.english || w.question || w.front),
+      translation: str(w.translation || w.ru || w.russian || w.meaning || w.answer || w.back),
       transcription: str(w.transcription || w.ipa || w.pronunciation),
     })).filter((w) => w.term);
-  return { set: str(raw?.set || raw?.title || raw?.name), words };
+  return { set: str(raw?.set || raw?.title || raw?.name), type: raw?.type === 'study' ? 'study' : 'language', words };
 }
 
 function tryJson(text) {
@@ -57,6 +57,7 @@ function parseLine(line) {
     const m = s.match(/^([^,]+),\s*(.+)$/);
     if (m && hasCyrillic(m[2]) && !hasCyrillic(m[1])) return { term: m[1].trim(), translation: m[2].trim(), transcription };
   }
+  if (cols.length >= 2 && hasCyrillic(cols[0])) return { term: cols[0], translation: cols.slice(1).join('; '), transcription };
   const term = cols.find((c) => !hasCyrillic(c)) || '';
   if (!term) return null;
   const translation = cols.filter((c) => c !== term && hasCyrillic(c)).join(', ');
@@ -81,4 +82,14 @@ export function dedupe(words, existing = []) {
     seen.add(k);
     return { ...w, dup };
   });
+}
+
+// A collection keeps separate topics separate during one file import.
+export function parseCollection(text) {
+  let raw;
+  try { raw = JSON.parse(String(text).trim()); } catch { return null; }
+  if (!Array.isArray(raw?.sets) || !raw.sets.length) return null;
+  const sets = raw.sets.map(fromJson);
+  if (sets.some((s) => !s?.set || !s.words.length || s.words.some((w) => !w.translation))) return null;
+  return sets;
 }

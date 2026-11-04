@@ -15,7 +15,7 @@ import AddSheet from './components/AddSheet.jsx';
 
 // Just two places: words (sets, review, progress) and tests. Everything is added via "+".
 const TABS = [
-  { id: '', label: 'Слова', icon: Layers },
+  { id: '', label: 'Наборы', icon: Layers },
   { id: 'tests', label: 'Тесты', icon: ClipboardCheck },
 ];
 
@@ -79,7 +79,7 @@ function Login() {
     <div className="app lock">
       <form className="stack" style={{ width: '100%', maxWidth: 360, textAlign: 'left' }} onSubmit={submit}>
         <div style={{ textAlign: 'center' }}><Flower size={56} /></div>
-        <h1 className="display h-lg" style={{ textAlign: 'center', marginBottom: 8 }}>Твой <em>словарик</em></h1>
+        <h1 className="display h-lg" style={{ textAlign: 'center', marginBottom: 8 }}>Твои <em>карточки</em></h1>
         <div className="field">
           <label htmlFor="l-email">Имя пользователя</label>
           <input id="l-email" className="input" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck="false"

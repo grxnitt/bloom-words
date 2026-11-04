@@ -17,6 +17,7 @@ export default function WordSheet({ open, onClose, setId, card }) {
   const reqId = useRef(0);
   const sets = useStore((st) => list('sets', st.data)).sort((a, b) => b.updatedAt - a.updatedAt);
   const [target, setTarget] = useState('');
+  const study = card?.kind === 'study' || sets.find((s) => s.id === (setId || target))?.type === 'study';
 
   useEffect(() => {
     if (!open) return;
@@ -30,7 +31,7 @@ export default function WordSheet({ open, onClose, setId, card }) {
 
   useEffect(() => {
     const t = term.trim();
-    if (!open || !t || (card && t === card.term)) return;
+    if (!open || study || !t || (card && t === card.term)) return;
     const id = ++reqId.current;
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -47,7 +48,7 @@ export default function WordSheet({ open, onClose, setId, card }) {
       }
     }, 550);
     return () => clearTimeout(timer);
-  }, [term, open, card]);
+  }, [term, open, card, study]);
 
   const toggleSuggestion = (s) => {
     touched.current.translation = true;
@@ -60,8 +61,8 @@ export default function WordSheet({ open, onClose, setId, card }) {
     const t = term.trim(), tr = translation.trim();
     if (!t || !tr) return;
     let sid = setId || target;
-    if (!card && sid === 'new') { sid = put('sets', { title: 'Мои слова' }).id; setTarget(sid); }
-    put('cards', { ...(card || { setId: sid, box: 0 }), term: t, translation: tr, transcription: transcription.trim() });
+    if (!card && sid === 'new') { sid = put('sets', { title: 'Мои карточки', type: study ? 'study' : 'language' }).id; setTarget(sid); }
+    put('cards', { ...(card || { setId: sid, box: 0 }), kind: study ? 'study' : 'language', term: t, translation: tr, transcription: transcription.trim() });
     if (more) {
       toast(`«${t}» добавлено`);
       setTerm(''); setTranslation(''); setTranscription(''); setSuggest([]);
@@ -75,9 +76,9 @@ export default function WordSheet({ open, onClose, setId, card }) {
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="row between" style={{ marginBottom: 18 }}>
-        <h2 className="display h-md">{card ? <>Изменить <em>слово</em></> : <>Новое <em>слово</em></>}</h2>
+        <h2 className="display h-md">{card ? <>Изменить <em>карточку</em></> : <>Новая <em>карточка</em></>}</h2>
         {card && (
-          <button className="icon-btn" aria-label="Удалить слово" onClick={() => { remove('cards', card.id); onClose(); toast('Слово удалено'); }}>
+          <button className="icon-btn" aria-label="Удалить карточку" onClick={() => { remove('cards', card.id); onClose(); toast('Карточка удалена'); }}>
             <Trash2 size={18} />
           </button>
         )}
@@ -90,28 +91,28 @@ export default function WordSheet({ open, onClose, setId, card }) {
               {sets.map((st) => (
                 <button type="button" key={st.id} className={`chip ${target === st.id ? 'on' : ''}`} onClick={() => setTarget(st.id)}>{st.title}</button>
               ))}
-              {!sets.length && <span className="chip on">Мои слова (новый)</span>}
+              {!sets.length && <span className="chip on">Мои карточки (новый)</span>}
             </div>
           </div>
         )}
         <div className="field">
-          <label htmlFor="w-term">Слово или фраза на английском</label>
+          <label htmlFor="w-term">{study ? 'Вопрос или термин' : 'Слово или фраза на английском'}</label>
           <div className="row" style={{ gap: 8 }}>
-            <input id="w-term" ref={termRef} className="input big" value={term} autoFocus autoCapitalize="none" autoCorrect="off"
-              spellCheck="false" placeholder="reliable" onChange={(e) => setTerm(e.target.value)} />
-            <SayButton text={term} />
+            <textarea id="w-term" ref={termRef} className="input big" value={term} autoFocus autoCapitalize="none" autoCorrect="off"
+              spellCheck="false" placeholder={study ? "Например, что такое прямой умысел?" : "reliable"} onChange={(e) => setTerm(e.target.value)} />
+            {!study && <SayButton text={term} />}
           </div>
         </div>
         <div className="field">
-          <label htmlFor="w-ts">Транскрипция</label>
+          {!study && <><label htmlFor="w-ts">Транскрипция</label>
           <input id="w-ts" className="input" value={transcription} placeholder={loading ? 'ищу…' : '[rɪˈlaɪəbl]'}
-            onChange={(e) => { touched.current.transcription = true; setTranscription(e.target.value); }} />
+            onChange={(e) => { touched.current.transcription = true; setTranscription(e.target.value); }} /></>}
         </div>
         <div className="field">
           <label htmlFor="w-tr" className="row" style={{ gap: 6 }}>
-            Перевод {loading && <Loader2 size={13} className="spin" />}
+            {study ? 'Ответ или определение' : 'Перевод'} {loading && <Loader2 size={13} className="spin" />}
           </label>
-          <input id="w-tr" className="input" value={translation} placeholder={loading ? 'ищу перевод…' : 'надёжный'}
+          <textarea id="w-tr" className="input" value={translation} placeholder={study ? 'Определение или ответ' : loading ? 'ищу перевод…' : 'надёжный'}
             onChange={(e) => { touched.current.translation = true; setTranslation(e.target.value); }} />
           {suggest.length > 0 && (
             <div className="chips" style={{ marginTop: 6 }}>

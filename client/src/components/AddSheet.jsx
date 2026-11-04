@@ -10,9 +10,9 @@ export default function AddSheet({ open, onClose, setId }) {
   const [sub, setSub] = useState(null); // 'word' | 'set'
 
   const OPTIONS = [
-    { id: 'word', icon: PenLine, title: 'Слово', sub: 'по одному, перевод подставится сам' },
-    { id: 'list', icon: ListPlus, title: 'Слова списком', sub: 'вставить ответ ChatGPT или загрузить файл' },
-    { id: 'set', icon: FolderPlus, title: 'Новый набор', sub: 'папка для слов по теме' },
+    { id: 'word', icon: PenLine, title: 'Карточка', sub: 'вопрос и ответ или слово и перевод' },
+    { id: 'list', icon: ListPlus, title: 'Карточки списком', sub: 'вставить ответ ChatGPT или загрузить файл' },
+    { id: 'set', icon: FolderPlus, title: 'Новый набор', sub: 'карточки по любому предмету' },
     { id: 'test', icon: ClipboardCheck, title: 'Тест на ошибки', sub: 'из ответа ChatGPT по заданиям учебника' },
   ];
 

@@ -6,7 +6,7 @@ import { StudyTop, Done } from './Study.jsx';
 
 const THRESHOLD = 90;
 
-export default function Flashcards({ deck, review, onAgain }) {
+export default function Flashcards({ deck, review, onAgain, study }) {
   const [queue, setQueue] = useState(deck);
   const [i, setI] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -18,6 +18,7 @@ export default function Flashcards({ deck, review, onAgain }) {
 
   const card = queue[i];
   const uniqueTotal = deck.length;
+  const subjectCard = study || card?.kind === 'study';
 
   if (!card) {
     return (
@@ -45,12 +46,14 @@ export default function Flashcards({ deck, review, onAgain }) {
 
   const onDown = (e) => {
     if (e.target.closest('button')) return;
-    drag.current = { x: e.clientX, moved: false };
+    drag.current = { x: e.clientX, y: e.clientY, moved: false, vertical: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
   const onMove = (e) => {
     if (!drag.current) return;
     const d = e.clientX - drag.current.x;
+    if (Math.abs(e.clientY - drag.current.y) > 8 && Math.abs(e.clientY - drag.current.y) > Math.abs(d)) { drag.current.moved = true; drag.current.vertical = true; }
+    if (drag.current.vertical) return;
     if (Math.abs(d) > 6) drag.current.moved = true;
     setDx(d);
   };
@@ -77,27 +80,27 @@ export default function Flashcards({ deck, review, onAgain }) {
       <div className="row between" style={{ marginBottom: 4 }}>
         <span className="eyebrow">{review ? 'Повторение' : 'Карточки'} · осталось {queue.length - i}</span>
         <button className="btn ghost sm" onClick={() => setReverse((r) => !r)} aria-label="Сменить направление">
-          <ArrowLeftRight size={15} /> {reverse ? 'RU → EN' : 'EN → RU'}
+          <ArrowLeftRight size={15} /> {subjectCard ? (reverse ? 'Ответ → вопрос' : 'Вопрос → ответ') : (reverse ? 'RU → EN' : 'EN → RU')}
         </button>
       </div>
 
       <div className="card-stage">
         <div style={{ ...style, width: '100%', display: 'grid', placeItems: 'center' }}
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-          <div className={`flash ${flipped ? 'flipped' : ''}`} key={card.id + i}>
+          <div className={`flash ${flipped ? 'flipped' : ''} ${subjectCard ? 'subject' : ''}`} key={card.id + i}>
             <div className="face">
               <span className="swipe-tag yes" style={{ opacity: dx > 0 ? tagOpacity : 0 }}>знаю</span>
               <span className="swipe-tag no" style={{ opacity: dx < 0 ? tagOpacity : 0 }}>ещё учу</span>
-              {!reverse && <div className="say"><SayButton text={card.term} /></div>}
+              {!reverse && !subjectCard && <div className="say"><SayButton text={card.term} /></div>}
               <div className="term">{front}</div>
               {!reverse && card.transcription && <div className="sub">{card.transcription}</div>}
               <div className="hint">нажми, чтобы перевернуть</div>
             </div>
             <div className="face back">
-              {reverse && <div className="say"><SayButton text={card.term} /></div>}
-              <div className="term" style={reverse ? null : { fontSize: 'clamp(30px, 8vw, 44px)' }}>{backText}</div>
+              {reverse && !subjectCard && <div className="say"><SayButton text={card.term} /></div>}
+              <div className="term" style={subjectCard || reverse ? null : { fontSize: 'clamp(30px, 8vw, 44px)' }}>{backText}</div>
               {reverse && card.transcription && <div className="sub">{card.transcription}</div>}
-              <div className="sub" style={{ fontSize: 14 }}>{reverse ? card.translation : card.term}</div>
+              <div className="sub" style={{ fontSize: 14 }}>{!subjectCard && (reverse ? card.translation : card.term)}</div>
             </div>
           </div>
         </div>

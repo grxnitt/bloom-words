@@ -12,7 +12,7 @@ export function SetCard({ set, p, i = 0 }) {
       </div>
       <div className="stack" style={{ gap: 8 }}>
         <ProgressBar p={p} />
-        <div className="small muted">{p.total ? `выучено ${Math.round((p.learned / p.total) * 100)}%` : 'добавь слова'}</div>
+        <div className="small muted">{p.total ? `выучено ${Math.round((p.learned / p.total) * 100)}%` : 'добавь карточки'}</div>
       </div>
     </a>
   );
@@ -20,11 +20,12 @@ export function SetCard({ set, p, i = 0 }) {
 
 export function NewSetSheet({ open, onClose, set }) {
   const [title, setTitle] = useState('');
-  useEffect(() => { if (open) setTitle(set?.title || ''); }, [open, set]);
+  const [type, setType] = useState('study');
+  useEffect(() => { if (open) { setTitle(set?.title || ''); setType(set?.type || (set ? 'language' : 'study')); } }, [open, set]);
   const save = () => {
     const t = title.trim();
     if (!t) return;
-    const rec = put('sets', { ...(set || {}), title: t });
+    const rec = put('sets', { ...(set || {}), title: t, type });
     onClose();
     if (!set) go(`/set/${rec.id}`);
   };
@@ -34,9 +35,10 @@ export function NewSetSheet({ open, onClose, set }) {
       <form className="stack" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <div className="field">
           <label htmlFor="set-title">Название</label>
-          <input id="set-title" className="input big" autoFocus value={title} placeholder="Например, «Путешествия»"
+          <input id="set-title" className="input big" autoFocus value={title} placeholder="Например, «Уголовное право»"
             onChange={(e) => setTitle(e.target.value)} />
         </div>
+        <div className="field"><label htmlFor="set-type">Тип набора</label><select id="set-type" className="input" value={type} onChange={(e) => setType(e.target.value)}><option value="study">Предмет — вопрос и ответ</option><option value="language">Английский — слово и перевод</option></select></div>
         <button className="btn block-w" disabled={!title.trim()}>{set ? 'Сохранить' : 'Создать'}</button>
       </form>
     </Sheet>

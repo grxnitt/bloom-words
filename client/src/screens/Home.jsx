@@ -29,8 +29,8 @@ export default function Home() {
 
   let title, sub;
   if (!cards.length) {
-    title = <>Начнём <em>с первых</em> слов</>;
-    sub = 'Нажми «+» внизу, чтобы создать набор и добавить слова — по одному или сразу списком.';
+    title = <>Начнём <em>с первых</em> карточек</>;
+    sub = 'Нажми «+» внизу, чтобы создать набор и добавить карточки — по одному или сразу списком.';
   } else if (queue.length) {
     title = <>Сегодня — <em>{words(queue.length)}</em></>;
     sub = [due && `${due} на повторение`, fresh > 0 && `${fresh} ${plural(fresh, 'новое', 'новых', 'новых')}`].filter(Boolean).join(' · ');
@@ -90,7 +90,7 @@ export default function Home() {
       ) : (
         <div className="empty">
           <div className="display h-sm">Здесь будут наборы</div>
-          <p className="small">Группируй слова по темам: урок, сериал, путешествие.</p>
+          <p className="small">Создавай наборы по темам: английский, право, история.</p>
         </div>
       )}
 

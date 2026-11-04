@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'favicon.svg'],
       manifest: {
-        name: 'Bloom — английские слова',
+        name: 'Bloom — карточки по темам',
         short_name: 'Bloom',
         lang: 'ru',
         start_url: './',

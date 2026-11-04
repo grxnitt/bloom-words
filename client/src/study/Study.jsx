@@ -75,15 +75,16 @@ export default function Study({ mode, setId }) {
       <>
         <StudyTop done={0} total={0} right={<span />} />
         <div className="result">
-          <h1 className="display h-lg">{mode === 'review' ? <>Всё <em>повторено</em></> : 'Здесь пока нет слов'}</h1>
-          <p className="muted">{mode === 'review' ? 'Новые слова для повторения появятся позже.' : 'Добавь слова в набор.'}</p>
+          <h1 className="display h-lg">{mode === 'review' ? <>Всё <em>повторено</em></> : 'Здесь пока нет карточек'}</h1>
+          <p className="muted">{mode === 'review' ? 'Новые карточки для повторения появятся позже.' : 'Добавь карточки в набор.'}</p>
           <button className="btn" onClick={() => back('/')}>Назад</button>
         </div>
       </>
     );
   }
 
-  const props = { deck, pool, set, onAgain: again };
+  const study = set?.type === 'study' || deck.every((c) => c.kind === 'study');
+  const props = { deck, pool: study ? deck : pool.filter((c) => c.kind !== 'study'), set, study, onAgain: again };
   let view;
   if (mode === 'quiz') view = <Quiz key={`q${round}`} {...props} />;
   else if (mode === 'write') view = <Write key={`w${round}`} {...props} />;
