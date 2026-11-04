@@ -6,6 +6,7 @@ import { words, go, back, fmtTime } from '../lib/util.js';
 import { ProgressBar, Notch, toast } from '../components/ui.jsx';
 import { NewSetSheet } from './Sets.jsx';
 import WordSheet from './WordSheet.jsx';
+import { subjectOf, NO_SUBJECT } from '../lib/subjects.js';
 
 export const MODES = [
   { id: 'cards', title: 'Карточки', sub: 'листай и вспоминай', icon: GalleryHorizontalEnd },
@@ -45,7 +46,7 @@ export default function SetDetail({ id }) {
       <div className="page-head">
         <button className="icon-btn" aria-label="Назад" onClick={() => back('/')}><ArrowLeft size={20} /></button>
         <div className="spacer" />
-        <button className="icon-btn" aria-label="Переименовать" onClick={() => setRename(true)}><Pencil size={17} /></button>
+        <button className="icon-btn" aria-label="Изменить набор" onClick={() => setRename(true)}><Pencil size={17} /></button>
         <button className="icon-btn" aria-label="Удалить набор" onClick={del}><Trash2 size={17} /></button>
       </div>
 
@@ -55,7 +56,7 @@ export default function SetDetail({ id }) {
             <button className="notch-btn" aria-label="Учить карточками" onClick={() => go(`/set/${id}/study/cards`)}><Play size={20} /></button>
           </Notch>
         )}
-        <div className="eyebrow">{words(p.total)}</div>
+        <div className="eyebrow">{subjectOf(set) || NO_SUBJECT} · {words(p.total)}</div>
         <h1 className="display h-lg" style={{ margin: '10px 0 22px', paddingRight: 56 }}>{set.title}</h1>
         <ProgressBar p={p} />
         <div className="legend" style={{ marginTop: 12 }}>

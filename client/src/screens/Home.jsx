@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowUpRight, Plus, ChevronRight } from 'lucide-react';
 import { useStore, list } from '../lib/store.js';
 import { reviewQueue, setProgress, isDue } from '../lib/srs.js';
 import { streak, words, plural, go } from '../lib/util.js';
 import { Notch } from '../components/ui.jsx';
 import { SetCard, NewSetSheet } from './Sets.jsx';
+import { subjectOf, subjectOptions, sameSubject, sortSets, NO_SUBJECT } from '../lib/subjects.js';
+
+function savedSetView() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('bloom:sets-view'));
+    return { subject: typeof saved?.subject === 'string' ? saved.subject : null,
+      order: ['title', 'updated', 'created'].includes(saved?.order) ? saved.order : 'title' };
+  } catch { return { subject: null, order: 'title' }; }
+}
 
 function greeting() {
   const h = new Date().getHours();
@@ -18,8 +27,19 @@ function greeting() {
 export default function Home() {
   const data = useStore((s) => s.data);
   const [newSet, setNewSet] = useState(false);
+  const [view, setView] = useState(savedSetView);
+  useEffect(() => {
+    try { sessionStorage.setItem('bloom:sets-view', JSON.stringify(view)); } catch { /* browsing preferences are optional */ }
+  }, [view]);
   const cards = list('cards', data);
-  const sets = list('sets', data).sort((a, b) => b.updatedAt - a.updatedAt);
+  const sets = list('sets', data);
+  const subjects = subjectOptions(sets);
+  if (view.subject && !subjects.some((s) => sameSubject(s, view.subject))) subjects.push(view.subject);
+  if (sets.some((s) => !subjectOf(s)) || view.subject === '') subjects.push('');
+  const filtered = sortSets(sets.filter((s) => view.subject === null || sameSubject(subjectOf(s), view.subject)), view.order);
+  const groups = view.subject === null
+    ? subjects.map((subject) => ({ subject, sets: filtered.filter((s) => sameSubject(subjectOf(s), subject)) })).filter((g) => g.sets.length)
+    : [{ subject: view.subject, sets: filtered }];
   const reviews = list('reviews', data);
   const queue = reviewQueue(cards);
   const due = cards.filter((c) => isDue(c)).length;
@@ -81,20 +101,50 @@ export default function Home() {
         <h2 className="display h-md">Мои наборы</h2>
         <button className="btn soft sm" onClick={() => setNewSet(true)}><Plus size={16} /> Набор</button>
       </div>
-      {sets.length ? (
-        <div className="sets-grid enter-3">
-          {sets.map((s, i) => (
-            <SetCard key={s.id} set={s} i={i} p={setProgress(cards.filter((c) => c.setId === s.id))} />
+      <div className="sets-toolbar enter-3">
+        <div className="subject-filters" role="group" aria-label="Предметы">
+          <button className={`chip ${view.subject === null ? 'on' : ''}`} aria-pressed={view.subject === null}
+            onClick={() => setView((v) => ({ ...v, subject: null }))}>Все <span>{sets.length}</span></button>
+          {subjects.map((subject) => (
+            <button key={subject} className={`chip ${view.subject !== null && sameSubject(view.subject, subject) ? 'on' : ''}`}
+              aria-pressed={view.subject !== null && sameSubject(view.subject, subject)}
+              onClick={() => setView((v) => ({ ...v, subject }))}>
+              {subject || NO_SUBJECT} <span>{sets.filter((s) => sameSubject(subjectOf(s), subject)).length}</span>
+            </button>
+          ))}
+        </div>
+        <div className="sets-sort">
+          <label htmlFor="sets-order">Сортировка</label>
+          <select id="sets-order" className="input" value={view.order}
+            onChange={(e) => setView((v) => ({ ...v, order: e.target.value }))}>
+            <option value="title">По названию</option>
+            <option value="updated">Недавно изменённые</option>
+            <option value="created">Сначала новые</option>
+          </select>
+        </div>
+      </div>
+      {filtered.length ? (
+        <div className="subject-groups enter-3">
+          {groups.map((group) => (
+            <section key={group.subject} aria-label={group.subject || NO_SUBJECT}>
+              {view.subject === null && <h3 className="subject-heading">{group.subject || NO_SUBJECT}<span>{group.sets.length} {plural(group.sets.length, 'набор', 'набора', 'наборов')}</span></h3>}
+              <div className="sets-grid">
+                {group.sets.map((s, i) => (
+                  <SetCard key={s.id} set={s} i={i} p={setProgress(cards.filter((c) => c.setId === s.id))} />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       ) : (
         <div className="empty">
-          <div className="display h-sm">Здесь будут наборы</div>
-          <p className="small">Создавай наборы по темам: английский, право, история.</p>
+          <div className="display h-sm">{view.subject === null ? 'Здесь будут наборы' : 'По этому предмету пока нет наборов'}</div>
+          <p className="small">{view.subject === null ? 'Создавай наборы по темам: английский, право, история.' : `Создай первый набор: ${view.subject || NO_SUBJECT}.`}</p>
+          <button className="btn soft sm" onClick={() => setNewSet(true)}><Plus size={16} /> Создать набор</button>
         </div>
       )}
 
-      <NewSetSheet open={newSet} onClose={() => setNewSet(false)} />
+      <NewSetSheet open={newSet} onClose={() => setNewSet(false)} initialSubject={view.subject || ''} />
     </div>
   );
 }

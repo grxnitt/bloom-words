@@ -5,6 +5,8 @@ import { parseWords, parseCollection, dedupe, WORDS_PROMPT } from '../lib/wordFo
 import { lookup } from '../lib/lookup.js';
 import { back, go, words as wordsN } from '../lib/util.js';
 import { toast } from '../components/ui.jsx';
+import SubjectField from '../components/SubjectField.jsx';
+import { subjectOf, normalizeSubject, NO_SUBJECT } from '../lib/subjects.js';
 
 const ACCEPT = '.txt,.csv,.tsv,.json,.md,text/plain,text/csv,application/json';
 
@@ -21,6 +23,7 @@ export default function WordImport({ setId: initialSet }) {
   const [items, setItems] = useState([]);
   const [target, setTarget] = useState(initialSet || sets[0]?.id || 'new');
   const [newName, setNewName] = useState('');
+  const [subject, setSubject] = useState('');
   const [finding, setFinding] = useState(0);
   const fileRef = useRef(null);
   const run = useRef(0);
@@ -41,7 +44,10 @@ export default function WordImport({ setId: initialSet }) {
       const parsed = parseWords(text);
       const mode = parsed.type === 'study' ? 'study' : effectiveType;
       if (parsed.type === 'study') setType('study');
-      if (parsed.set && !initialSet) { setNewName(parsed.set); setTarget('new'); }
+      if (parsed.set && !initialSet) {
+        setNewName(parsed.set); setTarget('new');
+        setSubject(subjectOf({ title: parsed.set, type: mode, ...(typeof parsed.subject === 'string' ? { subject: parsed.subject } : {}) }));
+      }
       const next = parsed.words.map((w, i) => ({ ...w, key: `${i}-${w.term}`, on: true, loading: mode === 'language' && (!w.translation || !w.transcription) }));
       setItems(next);
       const todo = next.filter((w) => w.loading);
@@ -86,7 +92,8 @@ export default function WordImport({ setId: initialSet }) {
       let added = 0;
       for (const topic of collection) {
         const existingSet = sets.find((s) => s.title === topic.set && s.type === topic.type);
-        const sid = existingSet?.id || put('sets', { title: topic.set, type: topic.type }).id;
+        const sid = existingSet?.id || put('sets', { title: topic.set, type: topic.type,
+          subject: subjectOf({ title: topic.set, type: topic.type, ...(typeof topic.subject === 'string' ? { subject: topic.subject } : {}) }) }).id;
         const existingTerms = list('cards', data).filter((c) => c.setId === sid).map((c) => c.term);
         for (const w of dedupe(topic.words, existingTerms).filter((w) => !w.dup)) {
           put('cards', { setId: sid, box: 0, kind: topic.type === 'study' ? 'study' : 'language', term: w.term, translation: w.translation, transcription: w.transcription });
@@ -100,7 +107,7 @@ export default function WordImport({ setId: initialSet }) {
     let setId = target;
     if (target === 'new') {
       const name = newName.trim() || 'Новый набор';
-      setId = put('sets', { title: name, type }).id;
+      setId = put('sets', { title: name, type, subject: normalizeSubject(subject) }).id;
     }
     chosen.forEach((w) => put('cards', { setId, box: 0, kind: (target === 'new' ? type : data.sets[target]?.type) === 'study' ? 'study' : 'language', term: w.term, translation: w.translation, transcription: w.transcription }));
     toast(`Добавлено: ${wordsN(chosen.length)}`);
@@ -111,7 +118,7 @@ export default function WordImport({ setId: initialSet }) {
     <div>
       <h1 className="display h-lg">Наборы <em>по темам</em></h1>
       <p>Найдено {collection.length} наборов · {wordsN(collection.reduce((n, s) => n + s.words.length, 0))}. Каждый набор сохранится отдельно. Уже добавленные вопросы будут пропущены.</p>
-      <div className="stack">{collection.map((s) => <section className="block" key={s.set}><h2>{s.set}</h2><p>{wordsN(s.words.length)}</p><p className="small">{s.words[0].term}</p></section>)}</div>
+      <div className="stack">{collection.map((s) => <section className="block" key={s.set}><div className="subject-label">{subjectOf({ ...s, title: s.set }) || NO_SUBJECT}</div><h2>{s.set}</h2><p>{wordsN(s.words.length)}</p><p className="small">{s.words[0].term}</p></section>)}</div>
       <div className="save-bar"><button className="btn block-w" onClick={save}>Добавить все наборы</button><button className="btn soft" onClick={() => setText('')}>Другой файл</button></div>
     </div>
   );
@@ -166,7 +173,10 @@ export default function WordImport({ setId: initialSet }) {
               <button className={`chip ${target === 'new' ? 'on' : ''}`} onClick={() => setTarget('new')}><Plus size={13} style={{ verticalAlign: -2 }} /> Новый</button>
             </div>
             {target === 'new' && (
-              <input className="input" style={{ marginTop: 8 }} value={newName} placeholder="Название нового набора" onChange={(e) => setNewName(e.target.value)} />
+              <div className="stack mt-sm">
+                <input className="input" value={newName} placeholder="Название нового набора" onChange={(e) => setNewName(e.target.value)} />
+                <SubjectField id="import-subject" value={subject} onChange={setSubject} sets={sets} />
+              </div>
             )}
           </div>
 

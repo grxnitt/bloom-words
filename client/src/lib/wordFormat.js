@@ -31,7 +31,8 @@ function fromJson(raw) {
       translation: str(w.translation || w.ru || w.russian || w.meaning || w.answer || w.back),
       transcription: str(w.transcription || w.ipa || w.pronunciation),
     })).filter((w) => w.term);
-  return { set: str(raw?.set || raw?.title || raw?.name), type: raw?.type === 'study' ? 'study' : 'language', words };
+  return { set: str(raw?.set || raw?.title || raw?.name), type: raw?.type === 'study' ? 'study' : 'language',
+    ...(typeof raw?.subject === 'string' ? { subject: raw.subject.trim() } : {}), words };
 }
 
 function tryJson(text) {
